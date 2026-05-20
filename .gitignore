@@ -1,0 +1,19 @@
+# snapcraft build artifacts
+*.snap
+parts/
+stage/
+prime/
+.snapcraft/
+
+# snapcraft state
+snap/.snapcraft/
+
+# General
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+*.log
+.vscode/
+.idea/
+.workshop.lock

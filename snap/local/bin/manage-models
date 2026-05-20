@@ -1,0 +1,281 @@
+#!/bin/sh
+# manage-models — se-llama GGUF model management helper
+# Subcommands: list, validate, info
+
+MODELS_DIR="${SNAP_USER_COMMON:-$HOME/snap/se-llama/common}/models"
+
+usage() {
+    echo "Usage: se-llama.models <subcommand> [options]"
+    echo ""
+    echo "Subcommands:"
+    echo "  list [--format json|table]   List GGUF models in the models directory"
+    echo "  validate <file>              Check GGUF magic bytes and metadata"
+    echo "  info <file>                  Print detailed metadata for a GGUF file"
+    exit 3
+}
+
+# Read a 4-byte little-endian uint32 from file at given byte offset
+# Outputs decimal integer
+read_u32_le() {
+    local file="$1"
+    local offset="$2"
+    # Use dd to read 4 bytes, od to decode little-endian uint32
+    dd if="$file" bs=1 skip="$offset" count=4 2>/dev/null | od -An -tu4 --endian=little 2>/dev/null | tr -d ' \n'
+}
+
+# Read a null-terminated or fixed-length string from GGUF metadata
+# For simplicity, use Python if available for GGUF parsing
+parse_gguf_python() {
+    local file="$1"
+    local action="$2"
+    python3 - "$file" "$action" <<'PYEOF'
+import sys, struct, os
+
+def read_u32(f):
+    return struct.unpack('<I', f.read(4))[0]
+
+def read_u64(f):
+    return struct.unpack('<Q', f.read(8))[0]
+
+def read_str(f):
+    length = struct.unpack('<Q', f.read(8))[0]
+    return f.read(length).decode('utf-8', errors='replace')
+
+def read_value(f, vtype):
+    if vtype == 8:   # string
+        return read_str(f)
+    elif vtype == 4: # uint32
+        return struct.unpack('<I', f.read(4))[0]
+    elif vtype == 5: # int32
+        return struct.unpack('<i', f.read(4))[0]
+    elif vtype == 6: # float32
+        return struct.unpack('<f', f.read(4))[0]
+    elif vtype == 7: # bool
+        return struct.unpack('B', f.read(1))[0]
+    elif vtype == 10: # uint64
+        return struct.unpack('<Q', f.read(8))[0]
+    elif vtype == 11: # int64
+        return struct.unpack('<q', f.read(8))[0]
+    elif vtype == 12: # float64
+        return struct.unpack('<d', f.read(8))[0]
+    elif vtype == 9:  # array
+        atype = struct.unpack('<I', f.read(4))[0]
+        count = struct.unpack('<Q', f.read(8))[0]
+        # Skip array elements — read and discard
+        for _ in range(min(count, 1000)):
+            read_value(f, atype)
+        return f"[array of {count}]"
+    else:
+        raise ValueError(f"unknown vtype {vtype}")
+
+file_path = sys.argv[1]
+action = sys.argv[2]
+
+try:
+    with open(file_path, 'rb') as f:
+        # Check magic
+        magic = f.read(4)
+        if magic != b'GGUF':
+            print(f"INVALID:{magic!r}")
+            sys.exit(1)
+
+        version = read_u32(f)
+        tensor_count = read_u64(f)
+        kv_count = read_u64(f)
+
+        metadata = {}
+        for _ in range(kv_count):
+            key = read_str(f)
+            vtype = struct.unpack('<I', f.read(4))[0]
+            value = read_value(f, vtype)
+            metadata[key] = value
+
+    arch = metadata.get('general.architecture', 'unknown')
+    quant = metadata.get('general.quantization_version', '')
+    # Try common quantization key patterns
+    file_type = metadata.get('general.file_type', None)
+    # Map file_type int to quantization string
+    FILE_TYPE_MAP = {
+        0: 'F32', 1: 'F16', 2: 'Q4_0', 3: 'Q4_1', 7: 'Q8_0',
+        8: 'Q5_0', 9: 'Q5_1', 10: 'Q2_K', 11: 'Q3_K_S', 12: 'Q3_K_M',
+        13: 'Q3_K_L', 14: 'Q4_K_S', 15: 'Q4_K_M', 16: 'Q5_K_S',
+        17: 'Q5_K_M', 18: 'Q6_K', 19: 'Q8_K',
+    }
+    quant_str = FILE_TYPE_MAP.get(file_type, f'type={file_type}') if file_type is not None else 'unknown'
+    ctx_key = f'{arch}.context_length'
+    ctx = metadata.get(ctx_key, metadata.get('llama.context_length', 0))
+    size = os.path.getsize(file_path)
+    name = os.path.basename(file_path)
+
+    # Estimate parameter count from tensor count (rough heuristic)
+    param_est = 'unknown'
+
+    if action == 'validate':
+        print(f"OK:v{version}:{arch}:{quant_str}:{ctx}")
+    elif action == 'info':
+        size_gb = size / 1e9
+        print(f"File:           {name}")
+        print(f"Path:           {file_path}")
+        print(f"Size:           {size_gb:.1f} GB ({size:,} bytes)")
+        print(f"GGUF version:   {version}")
+        print(f"Architecture:   {arch}")
+        print(f"Quantization:   {quant_str}")
+        print(f"Context length: {ctx}")
+    elif action == 'list_json':
+        import json
+        obj = {
+            "name": name,
+            "path": file_path,
+            "size_bytes": size,
+            "architecture": arch,
+            "quantization": quant_str,
+            "context_length": ctx,
+            "gguf_version": version,
+        }
+        print(json.dumps(obj))
+    elif action == 'list_table':
+        size_gb = size / 1e9
+        print(f"{name:<40} {size_gb:>6.1f} GB  {arch:<10} {quant_str}")
+
+except FileNotFoundError:
+    print(f"ERROR:File not found: {file_path}")
+    sys.exit(1)
+except Exception as e:
+    print(f"ERROR:{e}")
+    sys.exit(2)
+PYEOF
+}
+
+cmd_list() {
+    local format="table"
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --format) format="$2"; shift 2 ;;
+            *) shift ;;
+        esac
+    done
+
+    if [ ! -d "$MODELS_DIR" ]; then
+        echo "Models directory not found: ~/snap/se-llama/common/models/"
+        echo "Create it with: mkdir -p ~/snap/se-llama/common/models/"
+        exit 0
+    fi
+
+    local gguf_files
+    gguf_files=$(find "$MODELS_DIR" -maxdepth 2 -name "*.gguf" 2>/dev/null | sort)
+
+    if [ -z "$gguf_files" ]; then
+        if [ "$format" = "json" ]; then
+            echo "[]"
+        else
+            echo "No GGUF models found in $MODELS_DIR"
+        fi
+        exit 0
+    fi
+
+    if [ "$format" = "json" ]; then
+        echo "["
+        local first=1
+        for f in $gguf_files; do
+            result=$(parse_gguf_python "$f" list_json 2>/dev/null)
+            if echo "$result" | grep -q "^ERROR:"; then
+                continue
+            fi
+            if [ "$first" = "1" ]; then
+                first=0
+            else
+                echo ","
+            fi
+            printf "%s" "$result"
+        done
+        echo ""
+        echo "]"
+    else
+        printf "%-40s %10s  %-10s %s\n" "NAME" "SIZE" "ARCH" "QUANT"
+        for f in $gguf_files; do
+            result=$(parse_gguf_python "$f" list_table 2>/dev/null)
+            if echo "$result" | grep -q "^ERROR:"; then
+                echo "  (unreadable: $(basename "$f"))"
+            else
+                echo "$result"
+            fi
+        done
+    fi
+}
+
+cmd_validate() {
+    local filepath="$1"
+    if [ -z "$filepath" ]; then
+        echo "Usage: se-llama.models validate <filename-or-path>"
+        exit 1
+    fi
+
+    # Resolve path: if not absolute, look in models dir
+    if [ ! -f "$filepath" ]; then
+        candidate="$MODELS_DIR/$filepath"
+        if [ -f "$candidate" ]; then
+            filepath="$candidate"
+        else
+            echo "✗ $(basename "$filepath"): file not found"
+            exit 1
+        fi
+    fi
+
+    result=$(parse_gguf_python "$filepath" validate 2>/dev/null)
+    name=$(basename "$filepath")
+
+    if echo "$result" | grep -q "^INVALID:"; then
+        got=$(echo "$result" | sed 's/^INVALID://')
+        echo "✗ $name: invalid magic bytes (expected GGUF, got $got)"
+        exit 1
+    elif echo "$result" | grep -q "^ERROR:"; then
+        msg=$(echo "$result" | sed 's/^ERROR://')
+        echo "✗ $name: $msg"
+        exit 1
+    elif echo "$result" | grep -q "^OK:"; then
+        # OK:v3:phi3:Q4_K_M:4096
+        version=$(echo "$result" | cut -d: -f2 | sed 's/^v//')
+        arch=$(echo "$result" | cut -d: -f3)
+        quant=$(echo "$result" | cut -d: -f4)
+        ctx=$(echo "$result" | cut -d: -f5)
+        echo "✓ $name: valid GGUF v${version} (${arch}, ${quant}, ctx=${ctx})"
+        exit 0
+    else
+        echo "✗ $name: unexpected error"
+        exit 1
+    fi
+}
+
+cmd_info() {
+    local filepath="$1"
+    if [ -z "$filepath" ]; then
+        echo "Usage: se-llama.models info <filename-or-path>"
+        exit 1
+    fi
+
+    if [ ! -f "$filepath" ]; then
+        candidate="$MODELS_DIR/$filepath"
+        if [ -f "$candidate" ]; then
+            filepath="$candidate"
+        else
+            echo "File not found: $filepath"
+            exit 1
+        fi
+    fi
+
+    result=$(parse_gguf_python "$filepath" info 2>/dev/null)
+    if echo "$result" | grep -q "^ERROR:"; then
+        msg=$(echo "$result" | sed 's/^ERROR://')
+        echo "Error: $msg"
+        exit 2
+    fi
+    echo "$result"
+}
+
+# Main dispatch
+case "${1:-}" in
+    list)     shift; cmd_list "$@" ;;
+    validate) shift; cmd_validate "$@" ;;
+    info)     shift; cmd_info "$@" ;;
+    *)        usage ;;
+esac

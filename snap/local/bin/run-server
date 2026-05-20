@@ -1,0 +1,20 @@
+#!/bin/sh
+# run-server — se-llama wrapper for llama-server
+# Seeds presets.ini on first run, then execs llama-server with preset flags prepended.
+
+PRESETS_FILE="$SNAP_USER_COMMON/config/presets.ini"
+DEFAULT_PRESETS="$SNAP/etc/se-llama/presets.ini"
+MODELS_DIR="$SNAP_USER_COMMON/models"
+
+# Seed config on first run
+if [ ! -f "$PRESETS_FILE" ]; then
+    mkdir -p "$SNAP_USER_COMMON/config"
+    cp "$DEFAULT_PRESETS" "$PRESETS_FILE"
+    echo "se-llama: seeded default config to $PRESETS_FILE" >&2
+fi
+
+# Exec llama-server with presets and models dir prepended; user flags follow
+exec "$SNAP/usr/bin/llama-server" \
+    --models-preset "$PRESETS_FILE" \
+    --models-dir    "$MODELS_DIR/" \
+    "$@"

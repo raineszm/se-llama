@@ -1,0 +1,14 @@
+#!/bin/sh
+# install hook — runs once on first install (and on each snap refresh)
+# Seeds user config and data directories for se-llama.
+
+# Create required data directories
+mkdir -p "$SNAP_USER_COMMON/config"
+mkdir -p "$SNAP_USER_COMMON/models"
+mkdir -p "$SNAP_USER_COMMON/run"
+mkdir -p "$SNAP_USER_DATA/logs"
+
+# Seed default presets.ini on first install only
+if [ ! -f "$SNAP_USER_COMMON/config/presets.ini" ]; then
+    cp "$SNAP/etc/se-llama/presets.ini" "$SNAP_USER_COMMON/config/presets.ini"
+fi

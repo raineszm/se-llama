@@ -171,7 +171,7 @@ No complexity violations requiring justification table entries.
 
 | Complexity | Why Needed | Simpler Alternative Rejected Because |
 |---|---|---|
-| Wrapper script (INI → env vars) | llama-server has no native config file | Passing all flags via CLI args each time is error-prone and not auditable for SE use |
+| Wrapper script (seeds config, prepends --models-preset) | Snap needs a first-run config seed mechanism and a stable entry point | Passing all flags via CLI args each time is error-prone and not auditable for SE use |
 | Two snap apps (`server` + `models`) | Different plug sets per principle III | Single app would require `models` to have `network-bind` and `opengl` unnecessarily |
 | Vulkan build deps (`glslc`, `spirv-headers`) | llama.cpp Vulkan backend requires shader compilation at snap build time | CPU-only build rejected; GPU acceleration is a stated requirement |
 | `install` hook for config seeding | Snap has no native first-run config mechanism | Seeding at every start would overwrite user edits |

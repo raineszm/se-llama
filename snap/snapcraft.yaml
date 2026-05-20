@@ -1,17 +1,99 @@
-name: se-llama # you probably want to 'snapcraft register <name>'
-base: core24 # the base snap is the execution environment for this snap
-version: '0.1' # just for humans, typically '1.2+git' or '1.3.2'
-summary: Single-line elevator pitch for your amazing snap # 79 char long summary
-description: |
-  This is my-snap's description. You have a paragraph or two to tell the
-  most important story about your snap. Keep it under 100 words though,
-  we live in tweetspace and your description wants to look good in the snap
-  store.
+# llama.cpp snap package — se-llama
+#
+# Backend variants (swap the Vulkan flag for the desired backend):
+#   Vulkan (default):  -DGGML_VULKAN=1
+#   ROCm (AMD):        -DGGML_HIP=ON   (requires self-hosted ROCm build infra)
+#   CUDA (NVIDIA):     -DGGML_CUDA=ON  (requires self-hosted CUDA build infra)
+#
+# To switch backends, replace the -DGGML_VULKAN=1 entry in cmake-parameters
+# below with the appropriate flag for your target GPU vendor.
 
-grade: devel # must be 'stable' to release into candidate/stable channels
-confinement: devmode # use 'strict' once you have the right plugs and slots
+name: se-llama
+base: core24
+adopt-info: llama-cpp
+summary: Privacy-first local LLM inference snap with Vulkan GPU acceleration
+description: |
+  se-llama packages llama.cpp (llama-server) as a strictly confined snap for
+  local, single-user LLM inference on Ubuntu 24.04. Key features:
+
+  - Vulkan GPU backend: runs on AMD, Intel, and most modern GPUs via the host
+    Vulkan ICD — no proprietary vendor libraries bundled.
+  - Zero on-disk inference data by default: no KV cache, no prompt cache files
+    written to disk unless you explicitly configure slot-save-path.
+  - presets.ini model management: define named model configurations in
+    ~/snap/se-llama/common/config/presets.ini; clients select models per-request
+    via the OpenAI-compatible "model" field.
+  - se-llama.models command for listing and validating GGUF model files.
+  - Strict AppArmor confinement: only ~/snap/se-llama/common/ is accessible.
+
+  Quick start:
+    sudo snap install se-llama
+    mkdir -p ~/snap/se-llama/common/models/
+    # Copy a GGUF model file to ~/snap/se-llama/common/models/
+    se-llama.server --model ~/snap/se-llama/common/models/your-model.gguf
+
+grade: devel
+confinement: strict
+
+layout:
+  /usr/share/vulkan:
+    bind: $SNAP/usr/share/vulkan
+
+apps:
+  server:
+    command: bin/run-server
+    plugs:
+      - network-bind
+      - opengl
+      - personal-files
+
+  models:
+    command: bin/manage-models
+    plugs:
+      - personal-files
+
+plugs:
+  personal-files:
+    interface: personal-files
+    read:
+      - $HOME/snap/se-llama/common/models
 
 parts:
-  my-part:
-    # See 'snapcraft plugins'
-    plugin: nil
+  llama-cpp:
+    plugin: cmake
+    source: https://github.com/ggml-org/llama.cpp
+    source-type: git
+    cmake-generator: Ninja
+    cmake-parameters:
+      - -DCMAKE_BUILD_TYPE=Release
+      - -DCMAKE_INSTALL_PREFIX=/usr
+      - -DBUILD_SHARED_LIBS=OFF
+      - -DGGML_VULKAN=1
+      - -DLLAMA_BUILD_SERVER=ON
+    build-packages:
+      - cmake
+      - ninja-build
+      - libvulkan-dev
+      - glslc
+      - spirv-headers
+      - g++
+      - pkg-config
+    stage-packages:
+      - libvulkan1
+    prime:
+      - usr/bin/llama-server
+      - usr/bin/llama-*
+    override-pull: |
+      craftctl default
+      # Set snap version to upstream git tag for automatic version tracking
+      VERSION="$(git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD)"
+      craftctl set version="${VERSION}"
+
+  local-files:
+    plugin: dump
+    source: snap/local/
+    organize:
+      bin/run-server: bin/run-server
+      bin/manage-models: bin/manage-models
+      etc/se-llama/presets.ini: etc/se-llama/presets.ini
+      hooks/install: snap/hooks/install
