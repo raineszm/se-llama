@@ -1,0 +1,4 @@
+#!/bin/sh
+# update-models — sync se-llama presets into an OpenCode config.
+
+exec "$SNAP/usr/bin/python3" "$SNAP/libexec/update_models.py" "$@"
