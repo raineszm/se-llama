@@ -79,10 +79,12 @@ parts:
       - g++
       - pkg-config
     stage-packages:
+      - libgomp1
       - libvulkan1
     prime:
       - usr/bin/llama-server
-      - usr/bin/llama-*
+      - usr/lib/*/libgomp.so*
+      - usr/lib/*/libvulkan.so*
     override-pull: |
       craftctl default
       # Set snap version to upstream git tag for automatic version tracking

@@ -42,7 +42,7 @@ real system. All user stories depend on a buildable, installable snap.
 - [X] T009 Add `models` app to the `apps:` section in `snap/snapcraft.yaml`: `command: bin/manage-models`, `plugs: [personal-files]`
 - [X] T010 Add `plugs:` top-level section to `snap/snapcraft.yaml` declaring `personal-files` plug with `read` path `$SNAP_USER_COMMON/models`
 - [X] T011 Add a `dump` or `local-files` part to `snap/snapcraft.yaml` to stage files from `snap/local/` into the snap root
-- [ ] T012 Verify snap builds without error: run `snapcraft --destructive-mode` or in a VM/LXD container and fix any build errors in `snap/snapcraft.yaml`
+- [ ] T012 Verify snap builds without error: run `snapcraft pack` or in a VM/LXD container and fix any build errors in `snap/snapcraft.yaml`
 
 **Checkpoint**: `snapcraft` completes and produces `se-llama_*.snap`. Install with
 `sudo snap install se-llama_*.snap --dangerous` before proceeding.
@@ -176,6 +176,7 @@ command in `quickstart.md` finds zero cache/inference files.
 ### Parallel Opportunities
 
 All `[P]`-marked tasks within a phase can run simultaneously:
+
 - T003, T004, T005 (Phase 1 snap part setup)
 - T039, T040, T041, T042 (Phase 7 polish)
 - US2 (Phase 4) can begin in parallel with US1 (Phase 3) after Phase 2 completes
@@ -223,6 +224,7 @@ Task: "Write tests/integration/test_confinement.sh (T029)"
 ### Parallel Team Strategy
 
 With two engineers:
+
 - Engineer A: US1 (wrapper, hooks, default config) + US4 (manage-models binary)
 - Engineer B: US3 (snap lint, confinement tests) + US2 (presets integration tests)
 
