@@ -26,12 +26,6 @@ description: |
   - se-llama.models command for listing and validating GGUF model files.
   - Strict AppArmor confinement: only ~/snap/se-llama/common/ is accessible.
 
-  Quick start:
-    sudo snap install se-llama
-    mkdir -p ~/snap/se-llama/common/models/
-    # Copy a GGUF model file to ~/snap/se-llama/common/models/
-    se-llama.server --model ~/snap/se-llama/common/models/your-model.gguf
-
 grade: devel
 confinement: strict
 
@@ -45,11 +39,6 @@ apps:
     plugs:
       - network-bind
       - opengl
-      - personal-files
-
-  models:
-    command: bin/manage-models
-    plugs:
       - personal-files
 
   update-models:
@@ -77,7 +66,7 @@ parts:
       - -DCMAKE_BUILD_TYPE=Release
       - -DCMAKE_INSTALL_PREFIX=/usr
       - -DBUILD_SHARED_LIBS=OFF
-      - -DGGML_VULKAN=1
+      - -DGGML_VULKAN=ON
       - -DLLAMA_BUILD_SERVER=ON
     build-packages:
       - cmake
@@ -107,7 +96,6 @@ parts:
       - python3-minimal
     organize:
       bin/run-server: bin/run-server
-      bin/manage-models: bin/manage-models
       bin/update-models: bin/update-models
       libexec/update_models.py: libexec/update_models.py
       etc/se-llama/presets.ini: etc/se-llama/presets.ini
