@@ -19,24 +19,21 @@ description: |
   - Vulkan GPU backend: runs on AMD, Intel, and most modern GPUs via the host
     Vulkan ICD — no proprietary vendor libraries bundled.
   - Zero on-disk inference data by default: no KV cache, no prompt cache files
-    written to disk unless you explicitly configure slot-save-path.
+    written to disk.
   - presets.ini model management: define named model configurations in
     ~/snap/se-llama/common/config/presets.ini; clients select models per-request
     via the OpenAI-compatible "model" field.
-  - se-llama.models command for listing and validating GGUF model files.
-  - Strict AppArmor confinement: only ~/snap/se-llama/common/ is accessible.
 
 grade: devel
 confinement: strict
 
-layout:
-  /usr/share/vulkan:
-    bind: $SNAP/usr/share/vulkan
-
 apps:
   server:
     command: bin/run-server
+    extensions:
+      - gpu
     plugs:
+      - network
       - network-bind
       - opengl
       - personal-files
@@ -76,18 +73,28 @@ parts:
       - spirv-headers
       - g++
       - pkg-config
+      - libssl-dev
     stage-packages:
       - libgomp1
       - libvulkan1
+      - libglu1-mesa
+      - libssl3
     prime:
       - usr/bin/llama-server
       - usr/lib/*/libgomp.so*
       - usr/lib/*/libvulkan.so*
+      - usr/lib/*/libssl.so*
+      - usr/lib/*/libcrypto.so*
     override-pull: |
       craftctl default
       # Set snap version to upstream git tag for automatic version tracking
       VERSION="$(git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD)"
       craftctl set version="${VERSION}"
+
+  curl:
+    plugin: nil
+    stage-packages:
+      - curl
 
   local-files:
     plugin: dump
