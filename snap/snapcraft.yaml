@@ -36,22 +36,11 @@ apps:
       - network
       - network-bind
       - opengl
-      - personal-files
 
   update-models:
     command: bin/update-models
     plugs:
       - home
-      - personal-files
-
-plugs:
-  personal-files:
-    interface: personal-files
-    read:
-      - $HOME/snap/se-llama/common/models
-      - $HOME/snap/se-llama/common/config/presets.ini
-    write:
-      - $HOME/.config/opencode
 
 parts:
   llama-cpp:
@@ -106,4 +95,3 @@ parts:
       bin/update-models: bin/update-models
       libexec/update_models.py: libexec/update_models.py
       etc/se-llama/presets.ini: etc/se-llama/presets.ini
-      hooks/install: snap/hooks/install

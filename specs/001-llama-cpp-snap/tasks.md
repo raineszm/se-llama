@@ -22,7 +22,7 @@ and testing of each story.
 **Purpose**: Repository structure, snapcraft scaffolding, build environment.
 
 - [X] T001 Rename `snap/snapcraft.yaml` metadata: set `name: se-llama`, `base: core24`, `confinement: strict`, `grade: devel`, `summary`, `description` in `snap/snapcraft.yaml`
-- [X] T002 Create directory structure `snap/local/bin/`, `snap/local/etc/se-llama/`, `snap/local/hooks/`, `tests/integration/`, `tests/lint/` per plan.md
+- [X] T002 Create directory structure `snap/local/bin/`, `snap/local/etc/se-llama/`, `tests/integration/`, `tests/lint/` per plan.md
 - [X] T003 [P] Add upstream llama.cpp source part skeleton to `snap/snapcraft.yaml`: `source: https://github.com/ggml-org/llama.cpp`, `plugin: cmake`, `cmake-generator: Ninja`, placeholder `cmake-parameters` list
 - [X] T004 [P] Add `build-packages` to the llama.cpp part in `snap/snapcraft.yaml`: `cmake`, `ninja-build`, `libvulkan-dev`, `glslc`, `spirv-headers`, `g++`, `pkg-config`
 - [X] T005 [P] Add `stage-packages` to the llama.cpp part in `snap/snapcraft.yaml`: `libvulkan1`
@@ -38,9 +38,9 @@ real system. All user stories depend on a buildable, installable snap.
 
 - [X] T006 Fill CMake parameters in the llama.cpp part in `snap/snapcraft.yaml`: `-DCMAKE_BUILD_TYPE=Release`, `-DCMAKE_INSTALL_PREFIX=/usr`, `-DBUILD_SHARED_LIBS=OFF`, `-DGGML_VULKAN=1`, `-DLLAMA_BUILD_SERVER=ON` — see research.md §1
 - [X] T007 Add `prime` filter to the llama.cpp part in `snap/snapcraft.yaml` to include only `usr/bin/llama-server` and `usr/bin/llama-*` (exclude build artifacts and unused tools)
-- [X] T008 Add `apps:` section to `snap/snapcraft.yaml` with `server` app: `command: bin/run-server`, `plugs: [network-bind, opengl, personal-files]`
-- [X] T009 Add `models` app to the `apps:` section in `snap/snapcraft.yaml`: `command: bin/manage-models`, `plugs: [personal-files]`
-- [X] T010 Add `plugs:` top-level section to `snap/snapcraft.yaml` declaring `personal-files` plug with `read` path `$SNAP_USER_COMMON/models`
+- [X] T008 Add `apps:` section to `snap/snapcraft.yaml` with `server` app: `command: bin/run-server`, `plugs: [network, network-bind, opengl]`
+- [X] T009 Add `update-models` app to the `apps:` section in `snap/snapcraft.yaml`: `command: bin/update-models`, `plugs: [home]`
+- [X] T010 Keep model storage under `$SNAP_USER_COMMON/models` so the server needs no extra filesystem interface for model access
 - [X] T011 Add a `dump` or `local-files` part to `snap/snapcraft.yaml` to stage files from `snap/local/` into the snap root
 - [ ] T012 Verify snap builds without error: run `snapcraft pack` or in a VM/LXD container and fix any build errors in `snap/snapcraft.yaml`
 
@@ -59,9 +59,9 @@ response, run an inference, stop the server, and confirm zero cache files remain
 
 ### Implementation for User Story 1
 
-- [X] T013 [US1] Write `snap/local/bin/run-server` wrapper script: check if `$SNAP_USER_COMMON/config/presets.ini` exists; if not, copy `$SNAP/etc/se-llama/presets.ini`; exec `llama-server --models-preset $SNAP_USER_COMMON/config/presets.ini --models-dir $SNAP_USER_COMMON/models/ "$@"` — see contracts/server-cli.md
+- [X] T013 [US1] Write `snap/local/bin/run-server` wrapper script: create `$SNAP_USER_COMMON/config`, `$SNAP_USER_COMMON/models`, `$SNAP_USER_COMMON/run`, and `$SNAP_USER_DATA/logs`; check if `$SNAP_USER_COMMON/config/presets.ini` exists; if not, copy `$SNAP/etc/se-llama/presets.ini`; exec `llama-server --models-preset $SNAP_USER_COMMON/config/presets.ini --models-dir $SNAP_USER_COMMON/models/ "$@"` — see contracts/server-cli.md
 - [X] T014 [US1] Make `snap/local/bin/run-server` executable (`chmod +x`) and confirm the `dump` part in `snap/snapcraft.yaml` stages it to `bin/run-server` inside the snap
-- [X] T015 [US1] Write `snap/local/hooks/install` hook script: `mkdir -p $SNAP_USER_COMMON/config $SNAP_USER_COMMON/models $SNAP_USER_COMMON/run`; copy default presets if not present — see data-model.md §Snap Data Directories
+- [X] T015 [US1] Remove install hook requirement; first-run setup is handled lazily by `snap/local/bin/run-server` — see data-model.md §Snap Data Directories
 - [X] T016 [US1] Write `snap/local/etc/se-llama/presets.ini` default config: `[*]` section with `no-cache-prompt = true`, `cache-ram = 0`, `host = 127.0.0.1`, `port = 8080`; add example `[phi3-mini]` section (path commented out) — see contracts/presets-ini.md
 - [ ] T017 [US1] Rebuild snap, install `--dangerous`, place a small GGUF model in `~/snap/se-llama/common/models/`, add it to presets.ini, start `se-llama.server`, confirm `curl http://127.0.0.1:8080/health` returns `{"status":"ok"}`
 - [X] T018 [US1] Write `tests/integration/test_server_start.sh`: start server, poll `/health` up to 30 s, assert HTTP 200, stop server, assert exit 0
@@ -104,7 +104,7 @@ data dirs; `snap lint` reports zero errors.
 ### Implementation for User Story 3
 
 - [X] T026 [US3] Run `snap lint se-llama_*.snap` and fix all reported errors in `snap/snapcraft.yaml` (common issues: missing `plugs` declarations, invalid `apps` keys, grade/confinement mismatches)
-- [ ] T027 [US3] Connect interfaces on the test machine and verify with `snap connections se-llama`: only `network-bind`, `opengl`, `personal-files` should appear — validates SC-004
+- [ ] T027 [US3] Connect interfaces on the test machine and verify with `snap connections se-llama`: only declared interfaces for `server` and `update-models` should appear — validates SC-004
 - [X] T028 [US3] Write `tests/lint/test_snap_lint.sh`: run `snapcraft` then `snap lint se-llama_*.snap`, assert exit code 0 — validates SC-006
 - [X] T029 [US3] Write `tests/integration/test_confinement.sh`: attempt `se-llama.server --model /etc/passwd`, assert the process exits with a permission/AppArmor error (not a segfault or silent success) — validates spec US3 scenario 1
 - [ ] T030 [US3] Verify write confinement: while server is running, attempt `cp /dev/null ~/snap/se-llama/../../other-path` from inside the snap namespace (or check `/proc/<pid>/root` access), confirm writes outside snap dirs are denied — validates spec US3 scenario 2
@@ -124,11 +124,11 @@ command in `quickstart.md` finds zero cache/inference files.
 
 ### Implementation for User Story 4
 
-- [X] T032 [US4] Write `snap/local/bin/manage-models` shell script implementing `list`, `validate`, and `info` subcommands per `contracts/models-cli.md` — reads from `$SNAP_USER_COMMON/models/`, validates GGUF magic bytes, outputs table or JSON
-- [X] T033 [US4] Make `snap/local/bin/manage-models` executable and confirm the `dump` part stages it to `bin/manage-models` inside the snap
-- [ ] T034 [US4] Test `se-llama.models list` with an empty models directory — confirm it prints the "directory not found" guidance message and exits 0 — validates contracts/models-cli.md edge case
-- [ ] T035 [US4] Test `se-llama.models validate <valid-gguf>` — confirm it prints valid result; test with a non-GGUF file (e.g., a text file) — confirm it prints the invalid magic error
-- [ ] T036 [US4] Test `se-llama.models info <gguf>` — confirm metadata fields are printed (architecture, quantization, context length)
+- [X] T032 [US4] Write `snap/local/bin/update-models` wrapper and `snap/local/libexec/update_models.py` to sync valid `presets.ini` model entries into an OpenCode config
+- [X] T033 [US4] Make `snap/local/bin/update-models` executable and confirm the `dump` part stages it to `bin/update-models` inside the snap
+- [ ] T034 [US4] Test `se-llama.update-models --opencode-config <path>` with valid presets and confirm the OpenCode config is updated
+- [ ] T035 [US4] Test `se-llama.update-models` with malformed or incomplete presets and confirm invalid entries are skipped with clear warnings
+- [ ] T036 [US4] Test `se-llama.update-models` preserves existing per-model output limits when refreshing generated model entries
 - [ ] T037 [US4] Verify the audit procedure from `quickstart.md` §Data audit: after a full session, run `find ~/snap/se-llama/ -name "*.cache" -o -name "*.kv" -o -name "*.tmp"`, confirm empty — validates SC-003 and spec US4 scenario 1
 - [ ] T038 [US4] Verify `snap remove --purge se-llama` removes all data: install snap, run a session, remove with `--purge`, confirm `~/snap/se-llama/` does not exist — validates spec US4 scenario 2
 
@@ -162,8 +162,8 @@ command in `quickstart.md` finds zero cache/inference files.
   use the same wrapper); can start in parallel with US1 after Phase 2.
 - **US3 (Phase 5)**: Depends on Phase 2. Can start in parallel with US1/US2 — lint
   and confinement are independent of preset/model features.
-- **US4 (Phase 6)**: Depends on Phase 2. `manage-models` binary is independent;
-  audit procedure depends on a working server (US1).
+- **US4 (Phase 6)**: Depends on Phase 2. `update-models` is independent; audit
+  procedure depends on a working server (US1).
 - **Polish (Phase 7)**: Depends on all user stories being complete.
 
 ### Within Each User Story
@@ -191,7 +191,6 @@ All `[P]`-marked tasks within a phase can run simultaneously:
 
 # Agent A: User Story 1
 Task: "Write snap/local/bin/run-server wrapper (T013)"
-Task: "Write snap/local/hooks/install hook (T015)"
 Task: "Write snap/local/etc/se-llama/presets.ini (T016)"
 
 # Agent B: User Story 3 (lint — no binary dependency)
@@ -218,14 +217,14 @@ Task: "Write tests/integration/test_confinement.sh (T029)"
 2. US1 → working server with cache-free defaults → MVP
 3. US2 → presets router mode functional
 4. US3 → confinement verified, `snap lint` passes
-5. US4 → `se-llama.models` functional, audit procedure documented and verified
+5. US4 → `se-llama.update-models` functional, audit procedure documented and verified
 6. Polish → store-ready snap
 
 ### Parallel Team Strategy
 
 With two engineers:
 
-- Engineer A: US1 (wrapper, hooks, default config) + US4 (manage-models binary)
+- Engineer A: US1 (wrapper, default config) + US4 (update-models helper)
 - Engineer B: US3 (snap lint, confinement tests) + US2 (presets integration tests)
 
 Both engineers can work after Phase 2 completes. US2 and US3 test writing can begin

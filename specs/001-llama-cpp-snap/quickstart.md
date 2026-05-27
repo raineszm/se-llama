@@ -44,14 +44,6 @@ mkdir -p ~/snap/se-llama/common/models/
 cp ~/Downloads/phi-3-mini-q4_k_m.gguf ~/snap/se-llama/common/models/
 ```
 
-Verify it is recognized:
-
-```bash
-se-llama.models list
-```
-
----
-
 ## Start the server (router mode)
 
 The snap runs llama-server in **router mode** — no `--model` flag at startup. Models

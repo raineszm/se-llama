@@ -78,8 +78,8 @@ automatically. This makes Vulkan work correctly without bundling any GPU vendor 
 
 | App | Interfaces |
 |---|---|
-| `se-llama.server` | `network-bind`, `opengl`, `home` (or `personal-files`) |
-| `se-llama.models` | `home` |
+| `se-llama.server` | `network`, `network-bind`, `opengl` |
+| `se-llama.update-models` | `home` |
 
 **Alternatives considered**: `custom-device` interface for a tighter allowlist — rejected
 as significantly more complex with no meaningful security gain for this use case.
@@ -88,22 +88,18 @@ as significantly more complex with no meaningful security gain for this use case
 
 ## 4. Strict Confinement & AppArmor
 
-**Decision**: Strict confinement with `network-bind` for localhost binding; `home`
-interface for user model files; `opengl` for GPU.
+**Decision**: Strict confinement with `network` for outbound model downloads performed
+by llama-server, `network-bind` for localhost binding, and `opengl` for GPU. Model files
+used by the server live in snap-owned data under `$SNAP_USER_COMMON/models/`, which does
+not require an additional interface.
 
 **Rationale**: `network-bind` covers all `bind()` syscalls. Limiting to
 `127.0.0.1` must be enforced at the application level (`--host 127.0.0.1` flag);
 AppArmor does not filter by bind address.
 
-**Model file access strategy**:
-- **Preferred**: `personal-files` interface declaring `read: [$HOME/snap/se-llama/common/models]`
-  — most restrictive, no broad home access.
-- **Fallback**: `home` interface — broader but needed if users want to point to arbitrary
-  `~/` paths.
-- **Decision for v1**: Use `$SNAP_USER_COMMON/models/` as the canonical model directory
-  with `personal-files`, plus document that users can symlink from elsewhere. The `home`
-  interface can be added as an optional plug if user feedback shows the canonical
-  directory is too restrictive.
+**Model file access strategy**: Use `$SNAP_USER_COMMON/models/` as the canonical model
+directory. Users can copy model files there directly, or rely on `hf-repo` presets so
+llama-server downloads model artifacts into snap-managed storage.
 
 **Write paths** (no extra interface needed — all within snap data dirs):
 - `$SNAP_USER_COMMON/models/` — model storage (persists across refresh)
@@ -167,7 +163,7 @@ data-handling guide (quickstart.md).
 
 **Decision**: Use llama-server's native `--models-preset <path>` flag in router mode
 (no `--model`). Ship a default `presets.ini` at `$SNAP/etc/se-llama/presets.ini`,
-seeded to `$SNAP_USER_COMMON/config/presets.ini` on first install. The wrapper passes
+seeded to `$SNAP_USER_COMMON/config/presets.ini` on first run. The wrapper passes
 `--models-preset $SNAP_USER_COMMON/config/presets.ini` and `--models-dir
 $SNAP_USER_COMMON/models/` to llama-server; no custom INI parsing is needed.
 
@@ -225,39 +221,37 @@ own parsing.
 ## 8. Multiple Snap Apps
 
 **Decision**: Expose two apps: `se-llama.server` (llama-server wrapper) and
-`se-llama.models` (model listing/validation helper).
+`se-llama.update-models` (OpenCode config sync helper).
 
-**Rationale**: Keeping server and model management as separate snap apps allows
-different plug sets — `models` does not need `network-bind` or `opengl`, keeping the
-surface area minimal per principle III (Safety & Guardrails).
+**Rationale**: Keeping server and config sync as separate snap apps allows different
+plug sets — `update-models` needs `home` for a user-selected OpenCode config path, while
+the server does not.
 
 **App structure** (snapcraft.yaml `apps:` section):
 ```yaml
 apps:
   server:
     command: bin/run-server
-    plugs: [network-bind, opengl, personal-files]
-  models:
-    command: bin/manage-models
-    plugs: [personal-files]
+    plugs: [network, network-bind, opengl]
+  update-models:
+    command: bin/update-models
+    plugs: [home]
 ```
 
-Exposed as `se-llama.server` and `se-llama.models`.
+Exposed as `se-llama.server` and `se-llama.update-models`.
 
 ---
 
-## 9. FR-008 Clarification: Scope of `se-llama.models`
+## 9. FR-008 Clarification: Model Loading
 
-**Decision**: v1 scope = **list and validate** only. No download capability.
+**Decision**: No separate local model listing/validation helper is shipped in v1.
 
-**Rationale**: Downloading models requires `network` interface (outbound), complicates
-security review, and is out of scope for a confinement-focused v1. Users download models
-via browser or `wget` and place them in `$SNAP_USER_COMMON/models/`. The `models` app
-validates GGUF format (magic bytes + metadata check) and lists installed models with
-size and quantization info.
+**Rationale**: The server can consume local paths in `$SNAP_USER_COMMON/models/` and can
+also use llama.cpp's native `hf-repo` handling. Keeping a separate helper out of v1
+avoids another command surface and keeps interface review focused on the server and the
+OpenCode sync helper.
 
-**Future scope**: A `models download` subcommand using Hugging Face Hub API could be
-added in v2 behind the `network` interface.
+**Future scope**: A model helper can be reconsidered after the server workflow is stable.
 
 ---
 

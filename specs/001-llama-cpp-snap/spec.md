@@ -87,9 +87,8 @@ to define a "high-privacy" config that disables all caching.
 
 ### User Story 3 - Snap confinement limits filesystem access (Priority: P2)
 
-The confined snap can only read model files from its designated paths and cannot read
-arbitrary filesystem locations, limiting blast radius if the inference server is
-exploited.
+The confined snap reads model files from snap-managed storage and cannot read arbitrary
+filesystem locations, limiting blast radius if the inference server is exploited.
 
 **Why this priority**: Safety and data containment are constitutional requirements.
 This story validates the confinement is real, not nominal.
@@ -101,7 +100,7 @@ permission error.
 **Acceptance Scenarios**:
 
 1. **Given** the snap is strictly confined,
-   **When** a model path outside `$SNAP_USER_COMMON/models/` and `$HOME` is specified,
+   **When** a model path outside snap-managed data is specified,
    **Then** the snap's AppArmor profile denies the open and the server reports the
    denial clearly.
 
@@ -152,17 +151,15 @@ data-retention compliance.
 - **FR-003**: The snap MUST disable on-disk prompt caching by default
   (`--no-kv-offload` equivalent or explicit cache path set to a tmpfs/volatile
   location that is cleared on snap stop).
-- **FR-004**: The snap MUST use strict confinement with a minimal set of interfaces
-  (no `home` interface beyond model directory access, no network beyond loopback unless
-  explicitly required).
+- **FR-004**: The snap MUST use strict confinement with a minimal set of interfaces.
+  The server app must not receive broad home-directory access.
 - **FR-005**: The snap MUST provide a `presets.ini` mechanism so users can define named
   parameter groups applied at server startup.
 - **FR-006**: The snap MUST document all filesystem paths it reads from and writes to.
 - **FR-007**: The snap MUST expose `llama-server` as a named snap app
   (`se-llama.server`).
-- **FR-008**: The snap SHOULD expose a model management helper app
-  (`se-llama.models`) for listing and validating installed models — NEEDS CLARIFICATION:
-  scope of model management (download? validate only?).
+- **FR-008**: The snap SHOULD rely on llama-server's native model loading and Hugging
+  Face repository support in v1.
 - **FR-009**: The snap build MUST be reproducible from a `snapcraft.yaml` without
   manual steps.
 - **FR-010**: The snap MUST pass `snap lint` with no errors in strict confinement mode.

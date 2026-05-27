@@ -45,7 +45,7 @@ not bundle or download models.
 | `quantization` | string | Extracted from GGUF metadata (e.g., `Q4_K_M`) |
 | `context_length` | uint32 | Trained context length from metadata |
 
-**Validation rules** (applied by `se-llama.models validate`):
+**Validation rules** (applied when the server loads a model, or by external tooling):
 - Magic bytes MUST be `GGUF`; any other value → "Not a valid GGUF file".
 - File MUST NOT be zero-length.
 - File MUST be readable by the snap process (permission check).
@@ -147,8 +147,8 @@ All filesystem paths the snap reads from or writes to.
 
 ```
 Snap Package
-  ├── contains → Wrapper Scripts (run-server, manage-models)
-  ├── contains → Default Config ($SNAP/etc/se-llama/default-presets.ini)
+  ├── contains → Wrapper Scripts (run-server, update-models)
+  ├── contains → Default Config ($SNAP/etc/se-llama/presets.ini)
   └── manages →  Snap Data Directories
 
 User

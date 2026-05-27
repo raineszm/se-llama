@@ -13,9 +13,11 @@ se-llama.server [llama-server-flags...]
 ```
 
 The wrapper:
-1. Seeds `$SNAP_USER_COMMON/config/presets.ini` from the snap default if it does not
+1. Creates required per-user directories under `$SNAP_USER_COMMON` and
+   `$SNAP_USER_DATA`.
+2. Seeds `$SNAP_USER_COMMON/config/presets.ini` from the snap default if it does not
    exist.
-2. Execs `llama-server` with `--models-preset` and `--models-dir` prepended, followed
+3. Execs `llama-server` with `--models-preset` and `--models-dir` prepended, followed
    by any flags the user passed.
 
 Effective invocation inside the snap:
@@ -50,6 +52,7 @@ This bypasses `presets.ini` for that invocation.
 
 | Behavior | Description |
 |---|---|
+| Directory creation | Ensure `$SNAP_USER_COMMON/config`, `$SNAP_USER_COMMON/models`, `$SNAP_USER_COMMON/run`, and `$SNAP_USER_DATA/logs` exist before exec |
 | Config seeding | If `$SNAP_USER_COMMON/config/presets.ini` does not exist, copy from `$SNAP/etc/se-llama/presets.ini` before exec |
 
 All other flags are forwarded verbatim to `llama-server`. The wrapper adds no

@@ -63,8 +63,8 @@ CONNECTIONS=$(snap connections se-llama 2>/dev/null || echo "SNAP_NOT_INSTALLED"
 if [ "$CONNECTIONS" = "SNAP_NOT_INSTALLED" ]; then
     echo "[test] SKIP Test 2: snap not installed, cannot check connections"
 else
-    # Verify only expected interfaces: network-bind, opengl, personal-files
-    UNEXPECTED=$(echo "$CONNECTIONS" | grep -v "^Interface" | grep -v "network-bind" | grep -v "opengl" | grep -v "personal-files" | grep -v "^$" | grep -v "^-" || true)
+    # Verify only expected declared interfaces.
+    UNEXPECTED=$(echo "$CONNECTIONS" | grep -v "^Interface" | grep -v "network " | grep -v "network-bind" | grep -v "opengl" | grep -v "home" | grep -v "^$" | grep -v "^-" || true)
     if [ -z "$UNEXPECTED" ]; then
         echo "[test] PASS Test 2: only expected interfaces connected"
     else

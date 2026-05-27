@@ -1,4 +1,14 @@
 #!/bin/sh
 # update-models — sync se-llama presets into an OpenCode config.
 
+PRESETS_FILE="$SNAP_USER_COMMON/config/presets.ini"
+DEFAULT_PRESETS="$SNAP/etc/se-llama/presets.ini"
+
+mkdir -p "$SNAP_USER_COMMON/config"
+
+if [ ! -f "$PRESETS_FILE" ]; then
+    cp "$DEFAULT_PRESETS" "$PRESETS_FILE"
+    echo "se-llama: seeded default config to $PRESETS_FILE" >&2
+fi
+
 exec "$SNAP/usr/bin/python3" "$SNAP/libexec/update_models.py" "$@"
