@@ -12,16 +12,9 @@ USER_COMMON="$TMPDIR/user-common"
 USER_DATA="$TMPDIR/user-data"
 OPENCODE_CONFIG="$TMPDIR/opencode.jsonc"
 
-mkdir -p "$SNAP_ROOT/etc/se-llama" "$SNAP_ROOT/usr/bin" "$SNAP_ROOT/libexec"
+mkdir -p "$SNAP_ROOT/usr/bin" "$SNAP_ROOT/libexec"
 cp "$REPO_ROOT/snap/local/libexec/update_models.py" "$SNAP_ROOT/libexec/update_models.py"
-cat > "$SNAP_ROOT/etc/se-llama/presets.ini" <<'EOF'
-[*]
-no-cache-prompt = true
-
-[test-model]
-hf-repo = owner/test-model-GGUF:Q4_K_M
-ctx-size = 4096
-EOF
+cp "$REPO_ROOT/snap/local/libexec/generate_presets.py" "$SNAP_ROOT/libexec/generate_presets.py"
 
 printf '#!/bin/sh\nexit 0\n' > "$SNAP_ROOT/usr/bin/llama-server"
 chmod +x "$SNAP_ROOT/usr/bin/llama-server"

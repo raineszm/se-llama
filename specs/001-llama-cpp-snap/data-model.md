@@ -147,8 +147,8 @@ All filesystem paths the snap reads from or writes to.
 
 ```
 Snap Package
-  ├── contains → Wrapper Scripts (run-server, update-models)
-  ├── contains → Default Config ($SNAP/etc/se-llama/presets.ini)
+  ├── contains → Wrapper Scripts (run-server, update-models, generate-presets)
+  ├── contains → Preset Generator (generate_presets.py)
   └── manages →  Snap Data Directories
 
 User

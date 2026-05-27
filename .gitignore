@@ -17,3 +17,11 @@ Thumbs.db
 .vscode/
 .idea/
 .workshop.lock
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+*.egg-info/

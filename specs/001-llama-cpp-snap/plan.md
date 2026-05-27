@@ -112,12 +112,11 @@ snap/
 └── local/
     ├── bin/
     │   ├── run-server           # Wrapper: preset loading → exec llama-server
-    │   └── update-models        # OpenCode model config sync wrapper
+    │   ├── update-models        # OpenCode model config sync wrapper
+    │   └── generate-presets     # Preset generation app entrypoint
     ├── libexec/
-    │   └── update_models.py     # OpenCode model config sync helper
-    ├── etc/
-    │   └── se-llama/
-    │       └── presets.ini      # Shipped default config (read-only in snap)
+    │   ├── update_models.py     # OpenCode model config sync helper
+    │   └── generate_presets.py  # Preset generation logic
 
 tests/
 ├── integration/

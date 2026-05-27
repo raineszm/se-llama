@@ -53,7 +53,7 @@ This bypasses `presets.ini` for that invocation.
 | Behavior | Description |
 |---|---|
 | Directory creation | Ensure `$SNAP_USER_COMMON/config`, `$SNAP_USER_COMMON/models`, `$SNAP_USER_COMMON/run`, and `$SNAP_USER_DATA/logs` exist before exec |
-| Config seeding | If `$SNAP_USER_COMMON/config/presets.ini` does not exist, copy from `$SNAP/etc/se-llama/presets.ini` before exec |
+| Config seeding | If `$SNAP_USER_COMMON/config/presets.ini` does not exist, invoke `generate_presets.py` to create one before exec |
 
 All other flags are forwarded verbatim to `llama-server`. The wrapper adds no
 additional parsing or translation.

@@ -3,15 +3,13 @@
 # Seeds presets.ini on first run, then execs llama-server with preset flags prepended.
 
 PRESETS_FILE="$SNAP_USER_COMMON/config/presets.ini"
-DEFAULT_PRESETS="$SNAP/etc/se-llama/presets.ini"
 MODELS_DIR="$SNAP_USER_COMMON/models"
 
 mkdir -p "$SNAP_USER_COMMON/config" "$MODELS_DIR" "$SNAP_USER_COMMON/run" "$SNAP_USER_DATA/logs"
 
 # Seed config on first run.
 if [ ! -f "$PRESETS_FILE" ]; then
-    cp "$DEFAULT_PRESETS" "$PRESETS_FILE"
-    echo "se-llama: seeded default config to $PRESETS_FILE" >&2
+    python3 "$SNAP/libexec/generate_presets.py" >&2
 fi
 
 # Exec llama-server with presets and models dir prepended; user flags follow

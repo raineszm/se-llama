@@ -1,0 +1,6 @@
+#!/bin/sh
+# generate-presets - create a safe starter presets.ini.
+
+mkdir -p "$SNAP_USER_COMMON/config"
+
+exec python3 "$SNAP/libexec/generate_presets.py" "$@"

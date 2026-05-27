@@ -42,6 +42,9 @@ apps:
     plugs:
       - home
 
+  generate-presets:
+    command: bin/generate-presets
+
 parts:
   llama-cpp:
     plugin: cmake
@@ -91,8 +94,9 @@ parts:
     organize:
       bin/run-server: bin/run-server
       bin/update-models: bin/update-models
+      bin/generate-presets: bin/generate-presets
       libexec/update_models.py: libexec/update_models.py
-      etc/se-llama/presets.ini: etc/se-llama/presets.ini
+      libexec/generate_presets.py: libexec/generate_presets.py
 
   update-models-runtime:
     plugin: nil
