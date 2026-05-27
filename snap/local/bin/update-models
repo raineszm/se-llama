@@ -11,4 +11,4 @@ if [ ! -f "$PRESETS_FILE" ]; then
     echo "se-llama: seeded default config to $PRESETS_FILE" >&2
 fi
 
-exec "$SNAP/usr/bin/python3" "$SNAP/libexec/update_models.py" "$@"
+exec python3 "$SNAP/libexec/update_models.py" "$@"

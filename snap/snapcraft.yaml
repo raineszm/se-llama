@@ -88,10 +88,13 @@ parts:
   local-files:
     plugin: dump
     source: snap/local/
-    stage-packages:
-      - python3-minimal
     organize:
       bin/run-server: bin/run-server
       bin/update-models: bin/update-models
       libexec/update_models.py: libexec/update_models.py
       etc/se-llama/presets.ini: etc/se-llama/presets.ini
+
+  update-models-runtime:
+    plugin: nil
+    stage-packages:
+      - python3

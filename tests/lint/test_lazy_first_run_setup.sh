@@ -10,13 +10,21 @@ trap 'rm -rf "$TMPDIR"' EXIT
 SNAP_ROOT="$TMPDIR/snap"
 USER_COMMON="$TMPDIR/user-common"
 USER_DATA="$TMPDIR/user-data"
+OPENCODE_CONFIG="$TMPDIR/opencode.jsonc"
 
 mkdir -p "$SNAP_ROOT/etc/se-llama" "$SNAP_ROOT/usr/bin" "$SNAP_ROOT/libexec"
-cp "$REPO_ROOT/snap/local/etc/se-llama/presets.ini" "$SNAP_ROOT/etc/se-llama/presets.ini"
+cp "$REPO_ROOT/snap/local/libexec/update_models.py" "$SNAP_ROOT/libexec/update_models.py"
+cat > "$SNAP_ROOT/etc/se-llama/presets.ini" <<'EOF'
+[*]
+no-cache-prompt = true
+
+[test-model]
+hf-repo = owner/test-model-GGUF:Q4_K_M
+ctx-size = 4096
+EOF
 
 printf '#!/bin/sh\nexit 0\n' > "$SNAP_ROOT/usr/bin/llama-server"
-printf '#!/bin/sh\nexit 0\n' > "$SNAP_ROOT/usr/bin/python3"
-chmod +x "$SNAP_ROOT/usr/bin/llama-server" "$SNAP_ROOT/usr/bin/python3"
+chmod +x "$SNAP_ROOT/usr/bin/llama-server"
 
 SNAP="$SNAP_ROOT" \
 SNAP_USER_COMMON="$USER_COMMON" \
@@ -38,7 +46,7 @@ rm -f "$USER_COMMON/config/presets.ini"
 SNAP="$SNAP_ROOT" \
 SNAP_USER_COMMON="$USER_COMMON" \
 SNAP_USER_DATA="$USER_DATA" \
-	"$REPO_ROOT/snap/local/bin/update-models"
+	"$REPO_ROOT/snap/local/bin/update-models" --opencode-config "$OPENCODE_CONFIG"
 
 if [ ! -f "$USER_COMMON/config/presets.ini" ]; then
 	echo "[test] FAIL: update-models did not seed presets.ini"
