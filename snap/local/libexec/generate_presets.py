@@ -25,10 +25,13 @@ class ModelProfile:
     notes: str
     params: dict[str, str]
 
-    def render(self, annotation: str | None = None) -> list[str]:
+    def render(
+        self, annotation: str | None = None, default: bool = False
+    ) -> list[str]:
         """Render this model as INI lines for presets.ini.
 
         If annotation is provided, it is appended to the display name comment.
+        If default is True, a default-model marker is included.
         """
         header = f"; {self.display_name}"
         if annotation:
@@ -39,6 +42,8 @@ class ModelProfile:
             f"[{self.name}]",
             f"hf-repo = {self.model_reference}",
         ]
+        if default:
+            lines.append("default-model = true")
         for key, value in self.params.items():
             lines.append(f"{key} = {value}")
         lines.append("")
@@ -249,12 +254,7 @@ def render_presets(selected_profile: str, reason: str) -> str:
 
     for name in ("low", "balanced", "large"):
         profile = PROFILES[name]
-        annotation = (
-            "selected recommendation"
-            if name == selected_profile
-            else "alternative profile"
-        )
-        lines.extend(profile.render(annotation))
+        lines.extend(profile.render(default=name == selected_profile))
 
     # Suggested models (skip any whose model_reference matches a recommended profile)
     recommended_refs = {p.model_reference for p in PROFILES.values()}
