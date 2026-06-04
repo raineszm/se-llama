@@ -30,6 +30,9 @@ confinement: strict
 apps:
   server:
     command: bin/run-server
+    environment:
+      LLAMA_CACHE: $SNAP_USER_COMMON/models/llama
+      HF_HUB_CACHE: $SNAP_USER_COMMON/models/hf
     extensions:
       - gpu
     plugs:
