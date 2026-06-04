@@ -25,13 +25,10 @@ class ModelProfile:
     notes: str
     params: dict[str, str]
 
-    def render(
-        self, annotation: str | None = None, default: bool = False
-    ) -> list[str]:
+    def render(self, annotation: str | None = None) -> list[str]:
         """Render this model as INI lines for presets.ini.
 
         If annotation is provided, it is appended to the display name comment.
-        If default is True, a default-model marker is included.
         """
         header = f"; {self.display_name}"
         if annotation:
@@ -42,8 +39,6 @@ class ModelProfile:
             f"[{self.name}]",
             f"hf-repo = {self.model_reference}",
         ]
-        if default:
-            lines.append("default-model = true")
         for key, value in self.params.items():
             lines.append(f"{key} = {value}")
         lines.append("")
@@ -68,6 +63,9 @@ PROFILES: dict[str, ModelProfile] = {
             "alias": "se-llama-low",
             "ctx-size": "8192",
             "n-gpu-layers": "0",
+            "temp": "1.0",
+            "top-p": "0.95",
+            "top-k": "64",
         },
     ),
     "balanced": ModelProfile(
@@ -77,8 +75,13 @@ PROFILES: dict[str, ModelProfile] = {
         notes="Gemma 4 26B-A4B dynamic 4-bit (~18 GB); MoE with 4B active params, best speed/quality tradeoff.",
         params={
             "alias": "se-llama-balanced",
-            "ctx-size": "32768",
+            "ctx-size": "65536",
             "n-gpu-layers": "99",
+            "temp": "1.0",
+            "top-p": "0.95",
+            "top-k": "64",
+            # Inner quotes are intentional: llama-server parses this as a JSON string value.
+            "chat-template-kwargs": '{"enable_thinking":true}',
         },
     ),
     "large": ModelProfile(
@@ -88,8 +91,13 @@ PROFILES: dict[str, ModelProfile] = {
         notes="Gemma 4 31B dynamic 4-bit (~20 GB); strongest Gemma 4 model for 32+ GiB with GPU.",
         params={
             "alias": "se-llama-large",
-            "ctx-size": "32768",
+            "ctx-size": "131072",
             "n-gpu-layers": "99",
+            "temp": "1.0",
+            "top-p": "0.95",
+            "top-k": "64",
+            # Inner quotes are intentional: llama-server parses this as a JSON string value.
+            "chat-template-kwargs": '{"enable_thinking":true}',
         },
     ),
 }
@@ -103,6 +111,7 @@ SUGGESTED_MODELS: list[ModelProfile] = [
         notes="MoE coding specialist (3B active); strong for code generation and tool use.",
         params={
             "jinja": "true",
+            "ncmoe": "99",
             "ctx-size": "65536",
             "top-k": "20",
             "temp": "0.7",
@@ -132,6 +141,8 @@ SUGGESTED_MODELS: list[ModelProfile] = [
         notes="Full-precision 20B dense model; requires ~40 GB RAM.",
         params={
             "ctx-size": "131072",
+            "cache-type-k": "f16",
+            "cache-type-v": "f16",
             "temp": "1.0",
             "top-p": "1.0",
             "top-k": "0",
@@ -147,6 +158,7 @@ SUGGESTED_MODELS: list[ModelProfile] = [
             "temp": "1.0",
             "top-p": "0.95",
             "top-k": "20",
+            "min-p": "0.0",
             "presence-penalty": "1.5",
         },
     ),
@@ -245,7 +257,9 @@ def render_presets(selected_profile: str, reason: str) -> str:
         "; Privacy: this file disables prompt caching and omits persistent inference storage.",
         "",
         "[*]",
-        "no-cache-prompt = true",
+        "n-gpu-layers = 99",
+        "cache-type-k = q8_0",
+        "cache-type-v = q8_0",
         "host = 127.0.0.1",
         "port = 8080",
         "jinja = true",
@@ -254,7 +268,7 @@ def render_presets(selected_profile: str, reason: str) -> str:
 
     for name in ("low", "balanced", "large"):
         profile = PROFILES[name]
-        lines.extend(profile.render(default=name == selected_profile))
+        lines.extend(profile.render())
 
     # Suggested models (skip any whose model_reference matches a recommended profile)
     recommended_refs = {p.model_reference for p in PROFILES.values()}

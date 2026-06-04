@@ -44,7 +44,6 @@ trap cleanup EXIT
 cp "$PRESETS_FILE" "$BACKUP_FILE"
 cat > "$PRESETS_FILE" <<INI
 [*]
-no-cache-prompt = true
 cache-ram = 0
 host = $HOST
 port = $PORT
@@ -93,7 +92,6 @@ SERVER_PID=""
 echo "[test] === Test 2: Unknown key in preset causes startup error ==="
 cat > "$PRESETS_FILE" <<INI
 [*]
-no-cache-prompt = true
 cache-ram = 0
 host = $HOST
 port = $PORT
@@ -124,7 +122,6 @@ fi
 echo "[test] === Test 3: Unknown model in API request returns error; server keeps running ==="
 cat > "$PRESETS_FILE" <<INI
 [*]
-no-cache-prompt = true
 cache-ram = 0
 host = $HOST
 port = $PORT

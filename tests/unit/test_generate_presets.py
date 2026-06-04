@@ -32,7 +32,6 @@ class GeneratePresetsTests(unittest.TestCase):
 
         self.assertIn("[balanced]", content)
         self.assertIn("alias = se-llama-balanced", content)
-        self.assertIn("no-cache-prompt = true", content)
         self.assertNotIn("slot-save-path", content)
 
     def test_creates_missing_config_directory_and_file(self) -> None:
