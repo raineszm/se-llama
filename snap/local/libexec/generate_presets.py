@@ -13,6 +13,15 @@ from pathlib import Path
 
 
 PROFILE_CHOICES = ("auto", "low", "balanced", "large")
+DOWNLOAD_WARNING = (
+    "Warning: first se-llama.server start may download multi-GB model files "
+    "from Hugging Face into $SNAP_USER_COMMON/models/hf."
+)
+
+NO_NETWORK_NOTE = (
+    "Note: se-llama.generate-presets performs no network I/O; llama-server handles downloads at runtime."
+)
+
 
 
 @dataclass(frozen=True)
@@ -25,7 +34,9 @@ class ModelProfile:
     notes: str
     params: dict[str, str]
 
-    def render(self, annotation: str | None = None) -> list[str]:
+    def render(
+        self, annotation: str | None = None, load_on_startup: bool = False
+    ) -> list[str]:
         """Render this model as INI lines for presets.ini.
 
         If annotation is provided, it is appended to the display name comment.
@@ -41,6 +52,8 @@ class ModelProfile:
         ]
         for key, value in self.params.items():
             lines.append(f"{key} = {value}")
+        if load_on_startup:
+            lines.append("load-on-startup = true")
         lines.append("")
         return lines
 
@@ -268,7 +281,7 @@ def render_presets(selected_profile: str, reason: str) -> str:
 
     for name in ("low", "balanced", "large"):
         profile = PROFILES[name]
-        lines.extend(profile.render())
+        lines.extend(profile.render(load_on_startup=(name == selected_profile)))
 
     # Suggested models (skip any whose model_reference matches a recommended profile)
     recommended_refs = {p.model_reference for p in PROFILES.values()}
@@ -297,6 +310,12 @@ def backup_path(path: Path) -> Path:
     return candidate
 
 
+
+def print_download_warning() -> None:
+    """Print runtime download warning for hf-repo based presets."""
+    print(DOWNLOAD_WARNING)
+    print(NO_NETWORK_NOTE)
+
 def main(argv: list[str] | None = None) -> int:
     """Run the generate-presets CLI."""
     args = build_parser().parse_args(argv)
@@ -308,9 +327,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         print(f"Preview presets.ini: {path}")
         print(f"Selected profile: {selected.name} ({selected.reason})")
+        print_download_warning()
         print(content)
         return 0
-
     if path.exists() and not args.force:
         print(f"presets.ini already exists: {path}")
         print(
@@ -334,6 +353,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Created presets.ini: {path}")
     print(f"Selected profile: {selected.name} ({selected.reason})")
     print("Next: run se-llama.server")
+    print_download_warning()
     return 0
 
 

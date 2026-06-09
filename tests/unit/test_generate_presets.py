@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import os
 import sys
 import tempfile
@@ -32,7 +34,7 @@ class GeneratePresetsTests(unittest.TestCase):
 
         self.assertIn("[balanced]", content)
         self.assertIn("alias = se-llama-balanced", content)
-        self.assertNotIn("slot-save-path", content)
+        self.assertIn("load-on-startup = true", content)
 
     def test_creates_missing_config_directory_and_file(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -80,6 +82,28 @@ class GeneratePresetsTests(unittest.TestCase):
         self.assertIn("To switch profiles", content)
         self.assertIn("Edit hf-repo, alias, ctx-size, or n-gpu-layers", content)
 
+    def test_selected_profile_is_only_profile_with_load_on_startup(self) -> None:
+        content = generate_presets.render_presets(
+            selected_profile="large",
+            reason="test reason",
+        )
+
+        self.assertEqual(content.count("load-on-startup = true"), 1)
+        large_section = content.split("[large]", maxsplit=1)[1]
+        self.assertIn("load-on-startup = true", large_section)
+
+    def test_creation_output_includes_hf_download_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            stdout = io.StringIO()
+            with patch.dict(os.environ, {"SNAP_USER_COMMON": tmp}), contextlib.redirect_stdout(
+                stdout
+            ):
+                exit_code = generate_presets.main([])
+
+            self.assertEqual(exit_code, 0)
+            output = stdout.getvalue()
+            self.assertIn("Warning: first se-llama.server start may download", output)
+            self.assertIn("llama-server handles downloads at runtime", output)
     def test_auto_selection_memory_thresholds(self) -> None:
         self.assertEqual(generate_presets.select_profile("auto", 8, False).name, "low")
         self.assertEqual(generate_presets.select_profile("auto", 12, False).name, "balanced")

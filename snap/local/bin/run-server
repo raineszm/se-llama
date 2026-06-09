@@ -8,8 +8,14 @@ MODELS_USER_DIR="$SNAP_USER_COMMON/models/user"
 mkdir -p "$SNAP_USER_COMMON/config" "$MODELS_USER_DIR" "$SNAP_USER_COMMON/run" "$SNAP_USER_DATA/logs"
 
 # Seed config on first run.
+first_run=false
 if [ ! -f "$PRESETS_FILE" ]; then
+    first_run=true
     python3 "$SNAP/libexec/generate_presets.py" >&2
+fi
+
+if [ "$first_run" = true ]; then
+    echo "[se-llama] First run: llama-server may download multi-GB model files from Hugging Face into $SNAP_USER_COMMON/models/hf." >&2
 fi
 
 # Exec llama-server with presets and models dir prepended; user flags follow

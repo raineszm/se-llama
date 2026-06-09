@@ -19,11 +19,17 @@ cp "$REPO_ROOT/snap/local/libexec/generate_presets.py" "$SNAP_ROOT/libexec/gener
 printf '#!/bin/sh\nexit 0\n' > "$SNAP_ROOT/usr/bin/llama-server"
 chmod +x "$SNAP_ROOT/usr/bin/llama-server"
 
-SNAP="$SNAP_ROOT" \
-SNAP_USER_COMMON="$USER_COMMON" \
-SNAP_USER_DATA="$USER_DATA" \
-	"$REPO_ROOT/snap/local/bin/run-server"
+RUN_OUTPUT="$({
+    SNAP="$SNAP_ROOT" \
+    SNAP_USER_COMMON="$USER_COMMON" \
+    SNAP_USER_DATA="$USER_DATA" \
+        "$REPO_ROOT/snap/local/bin/run-server"
+} 2>&1)"
 
+if ! grep -q "\[se-llama\] First run: llama-server may download multi-GB model files" <<<"$RUN_OUTPUT"; then
+    echo "[test] FAIL: run-server did not print first-run download warning"
+    exit 1
+fi
 if [ ! -f "$USER_COMMON/config/presets.ini" ]; then
 	echo "[test] FAIL: run-server did not seed presets.ini"
 	exit 1
