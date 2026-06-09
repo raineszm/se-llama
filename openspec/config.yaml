@@ -1,0 +1,17 @@
+schema: spec-driven
+
+context: |
+  Project: se-llama (strictly confined Ubuntu snap for local llama.cpp inference)
+  Runtime: shell wrappers plus Python 3 helpers; snap packaging via snapcraft
+  Core domain language: Generated Presets File, System Profile, Recommended Model Profile, Write Result
+  Safety constraints: no persistent prompt/KV cache by default, no network model downloads in preset generation, strict confinement with minimal interfaces
+  Primary user paths: se-llama.server, se-llama.update-models, se-llama.generate-presets
+
+rules:
+  specs:
+    - Use MUST/SHALL statements for normative behavior.
+    - Include concrete GIVEN/WHEN/THEN scenarios for observable behavior.
+  design:
+    - Prefer snap-local patterns already used in snap/local/bin and snap/local/libexec.
+  tasks:
+    - Keep tasks independently verifiable with focused tests.

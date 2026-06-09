@@ -35,3 +35,23 @@ _Avoid_: config dir, user config path
 **load-on-startup**:
 A llama.cpp preset-only key that causes the router server to load a model immediately on startup rather than on the first request. Set by the Preset Generation Command on the activated Recommended Model Profile.
 _Avoid_: autoload, eager load, preload
+
+**Router Mode**:
+Server operating mode where multiple model configurations are defined in the Generated Presets File and each API request selects one by model name. Startup does not pin a single model.
+_Avoid_: single-model mode, fixed model startup
+
+**Model Alias**:
+The API-visible model identifier clients send in request payloads to select a configuration defined in the Generated Presets File.
+_Avoid_: preset id, internal name
+
+**Snap Model Store**:
+The user-owned persistent model storage under `$SNAP_USER_COMMON/models/` used by the snap for local model artifacts.
+_Avoid_: model cache, system model dir
+
+**Privacy-Preserving Defaults**:
+The default runtime posture that avoids intentional persistence of prompt or KV inference data beyond active server memory.
+_Avoid_: stateless mode, secure defaults
+
+**Confinement Boundary**:
+The runtime access boundary enforced by strict snap confinement that limits filesystem and device access to explicitly granted interfaces and snap-managed paths.
+_Avoid_: sandbox, security profile
