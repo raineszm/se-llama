@@ -18,10 +18,7 @@ DOWNLOAD_WARNING = (
     "from Hugging Face into $SNAP_USER_COMMON/models/hf."
 )
 
-NO_NETWORK_NOTE = (
-    "Note: se-llama.generate-presets performs no network I/O; llama-server handles downloads at runtime."
-)
-
+NO_NETWORK_NOTE = "Note: se-llama.generate-presets performs no network I/O; llama-server handles downloads at runtime."
 
 
 @dataclass(frozen=True)
@@ -93,8 +90,7 @@ PROFILES: dict[str, ModelProfile] = {
             "temp": "1.0",
             "top-p": "0.95",
             "top-k": "64",
-            # Inner quotes are intentional: llama-server parses this as a JSON string value.
-            "chat-template-kwargs": '{"enable_thinking":true}',
+            "reasoning": "on",
         },
     ),
     "large": ModelProfile(
@@ -109,8 +105,7 @@ PROFILES: dict[str, ModelProfile] = {
             "temp": "1.0",
             "top-p": "0.95",
             "top-k": "64",
-            # Inner quotes are intentional: llama-server parses this as a JSON string value.
-            "chat-template-kwargs": '{"enable_thinking":true}',
+            "reasoning": "on",
         },
     ),
 }
@@ -143,8 +138,7 @@ SUGGESTED_MODELS: list[ModelProfile] = [
             "temp": "1.0",
             "top-p": "0.95",
             "top-k": "64",
-            # Inner quotes are intentional: llama-server parses this as a JSON string value.
-            "chat-template-kwargs": '{"enable_thinking":true}',
+            "reasoning": "on",
         },
     ),
     ModelProfile(
@@ -310,11 +304,11 @@ def backup_path(path: Path) -> Path:
     return candidate
 
 
-
 def print_download_warning() -> None:
     """Print runtime download warning for hf-repo based presets."""
     print(DOWNLOAD_WARNING)
     print(NO_NETWORK_NOTE)
+
 
 def main(argv: list[str] | None = None) -> int:
     """Run the generate-presets CLI."""
